@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <assert.h>
 #include <limits.h>
 #include <time.h>
 
@@ -396,32 +398,149 @@ int main()
 {
 	srand((int)time(NULL));
 	
-	//testing
-	cores = 4;
-	quantum = 4;
-	int numProcesses = 10;
-	Process* processes = (Process*)malloc(sizeof(Process)*numProcesses);
+	int id, arrival, duration;
 	
-	for(int i = 0; i < numProcesses; i++)
+	FILE *ifp, *ofp;
+	char *mode = "r";
+	
+	char scheduler[30];
+	quantum = 0; cores = 0;
+	
+	char outputFilename[] = "output1.txt";
+
+	ifp = fopen("input1.txt", mode);
+
+	if (ifp == NULL) {
+		fprintf(stderr, "Can't open input file!\n");
+		exit(1);
+	}
+	
+	fscanf(ifp, "%s", scheduler);
+	//printf("Type: %s ", scheduler );
+	
+	fscanf(ifp, "%d", &quantum);
+	//printf("quantum: %d ", quantum );
+	
+	fscanf(ifp, "%d", &cores);
+	//printf("cores: %d\n", cores );
+	
+	//Counts the total processes for the malloc later.
+	int count = 0;
+	while(fscanf(ifp, "%d %d %d", &id, &arrival,&duration) != EOF) {
+		count++;
+	}
+	
+	printf("Number of processes: %d\n\n", count);
+	
+	//Re-opens file to load process.
+	ifp = fopen("input1.txt", mode);
+	
+	fscanf(ifp, "%s", scheduler);
+	printf("Type: %s ", scheduler );
+	
+	fscanf(ifp, "%d", &quantum);
+	printf("quantum: %d ", quantum );
+	
+	fscanf(ifp, "%d", &cores);
+	printf("cores: %d\n", cores );
+	
+	Process* processes = (Process*)malloc(sizeof(Process)*count);
+	
+	for(int i = 0; i < count; i++)
 	{
-		processes[i].id = i+1;
-		processes[i].arrivalTime = i;//rand()%10;
-		processes[i].timeRemaining = processes[i].burstTime = i+1;//rand()%10;
+		fscanf(ifp, "%d %d %d", &processes[i].id, &processes[i].arrivalTime,&processes[i].burstTime);
+		processes[i].timeRemaining = processes[i].burstTime;//rand()%10;
 		processes[i].startTime = -1;
 		processes[i].finishTime = -1;
 	}
 	
-	runRR_Load(processes,numProcesses);
-	
-	printf("Avg Turnaround:%f\n",calcAvgTurnaround(processes,numProcesses));
-	printf("Avg Wait:%f\n",calcAvgWait(processes,numProcesses));
-	
-	qsort(processes,numProcesses,sizeof(Process),compProcById);
-	
-	for(int i = 0; i < numProcesses; i++)
+	printf("READOUT: \n");
+	//printf("Type: %s\n", scheduler);
+	for(int i = 0; i < count; i++)
 	{
-		printf("ID:%d EndTime:%d\n",processes[i].id,processes[i].finishTime);
+		printf("ID: %d %d %d\n", processes[i].id, processes[i].arrivalTime,processes[i].burstTime);
+		processes[i].timeRemaining = processes[i].burstTime;//rand()%10;
+		processes[i].startTime = -1;
+		processes[i].finishTime = -1;
 	}
+	
+	printf("\nSCHEDULING\n\n");
+	if(strcmp(scheduler,"fcfs-single") == 0) {
+		printf("FCFS single starting\n");
+		runFCFS_Single(processes, count);
+		printf("\n");
+	}
+	else if(strcmp(scheduler,"fcfs-percore") == 0) {
+		printf("FCFS per core starting\n");
+		runFCFS_Percore(processes, count);
+		printf("\n");
+	}
+	
+	else if(strcmp(scheduler,"rr-percore") == 0) {
+		printf("RR per core starting\n");
+		runRR_Percore(processes, count);
+		printf("\n");
+	}
+	
+	else if(strcmp(scheduler,"rr-load") == 0) {
+		printf("RR load core starting\n");
+		runRR_Single(processes, count);
+		printf("\n");
+	}
+	printf("SCHEDULED\n\n");
+	
+	printf("EXPORTING\n");
+	ofp = fopen(outputFilename, "w");
+
+	if (ofp == NULL) {
+		fprintf(stderr, "Can't open output file %s!\n",outputFilename);
+		exit(1);
+	}
+		
+	qsort(processes,count,sizeof(Process),compProcById);
+
+	//fprintf(ofp, "Type: %s quantum: %d cores %d\n", scheduler, quantum, cores);
+	
+	for(int i = 0; i < count; i++) {
+		int wait = processes[i].finishTime-processes[i].burstTime-processes[i].arrivalTime;
+		printf("ID:%d Start:%d End:%d Turnaround:%d Wait:%d\n", processes[i].id, processes[i].startTime, processes[i].finishTime, wait);
+		fprintf(ofp,"ID:%d Start:%d End:%d Turnaround:%d Wait:%d\n", processes[i].id, processes[i].startTime, processes[i].finishTime, wait);
+	}
+	
+			
+	float avgTurn = calcAvgTurnaround(processes,count);
+	float avgWait = calcAvgWait(processes,count);
+	printf("Avg Turnaround: %f\n",avgTurn);
+	printf("Avg Wait: %f\n",avgTurn);
+	
+	fprintf(ofp,"Avg_turnaround:%d   Avg_wait:%d",avgTurn,avgWait);
+	
+	//testing
+	// cores = 4;
+	// quantum = 4;
+	// int numProcesses = 10;
+	// Process* processes = (Process*)malloc(numProcesses);
+	
+	// for(int i = 0; i < numProcesses; i++)
+	// {
+		// processes[i].id = i+1;
+		// processes[i].arrivalTime = i;//rand()%10;
+		// processes[i].timeRemaining = processes[i].burstTime = i+1;//rand()%10;
+		// processes[i].startTime = -1;
+		// processes[i].finishTime = -1;
+	// }
+	
+	// runRR_Percore(processes,numProcesses);
+	
+	// printf("Avg Turnaround:%f\n",calcAvgTurnaround(processes,numProcesses));
+	// printf("Avg Wait:%f\n",calcAvgWait(processes,numProcesses));
+	
+	// qsort(processes,numProcesses,sizeof(Process),compProcById);
+	
+	// for(int i = 0; i < numProcesses; i++)
+	// {
+		// printf("ID:%d EndTime:%d\n",processes[i].id,processes[i].finishTime);
+	// }
 	
 	
 	return 0;
