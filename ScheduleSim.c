@@ -360,91 +360,32 @@ int runRR_Percore(Process* allProceses, int num)
 	return maxTime;
 }
 
-int runRR_SingleFromUntil(Process** allProceses, int num, int time, int endTime)
+
+int workRemaining(Process** allProceses, int num)
 {
-	
-	if(quantum > 0)
+	int sum=0;
+	for(int i = 0 ; i < num;i++)
 	{
-		int ranSomething = 1;	
-		int timeToEnd = 0;
-		while(!timeToEnd && time<endTime)
-		{
-			ranSomething=0;
-			for(int i = 0 ; i < num; i++)
-			{
-				if(allProceses[i]==NULL)
-					continue;
-				
-				//if the process still needs time
-				if(allProceses[i]->timeRemaining && time>=allProceses[i]->arrivalTime)
-				{
-					ranSomething=1;
-					
-					if(allProceses[i]->startTime < 0)
-						allProceses[i]->startTime=time;
-					
-					//reduce time remaining
-					if(allProceses[i]->timeRemaining >= quantum)
-					{
-						allProceses[i]->timeRemaining-=quantum;
-						time+=quantum;
-						printf("Proc#:%d runs for:%d\n",allProceses[i]->id,quantum);
-					}
-					else if(allProceses[i]->timeRemaining < quantum)
-					{
-						time+=allProceses[i]->timeRemaining;
-						printf("Proc#:%d runs for:%d\n",allProceses[i]->id,allProceses[i]->timeRemaining);
-						allProceses[i]->timeRemaining=0;
-					}
-					
-					//if we ended
-					if(!allProceses[i]->timeRemaining)
-					{
-						allProceses[i]->finishTime=time;
-						printf("Proc#:%d finised at:%d\n",allProceses[i]->id,allProceses[i]->finishTime);
-					}
-					
-				}
-			}
-			
-			//if we didnt run anything that loop, nothing has arrived
-			if(!ranSomething)
-			{
-				int minArrivalTimePastCurrentTime = INT_MAX;
-				for(int i = 0 ; i < num; i++)
-				{
-					if(allProceses[i]==NULL)
-						continue;
-					if(allProceses[i]->arrivalTime > time)
-					{
-						if(minArrivalTimePastCurrentTime>allProceses[i]->arrivalTime)
-						{
-							minArrivalTimePastCurrentTime=allProceses[i]->arrivalTime;
-						}
-					}
-				}
-				if(minArrivalTimePastCurrentTime < INT_MAX)
-					time = minArrivalTimePastCurrentTime;
-				else
-					timeToEnd = 1;
-			}
-		}
-		
+		if(allProceses[i]!=NULL)
+		sum+=allProceses[i]->timeRemaining;
 	}
-	else
-		exit(1);
-		
-		
-	int numRunning = 0;
-	for(int i = 0 ; i < num; i++)
-	{
-		if(allProceses[i]!=NULL&&allProceses[i]->timeRemaining>0)
-		numRunning++;
-	}
-		
-	return numRunning;
+	return sum;
 }
 
+int totalWorkRemaining(Process*** allProceses, int cores, int size)
+{
+	int sum=0;
+	for(int i = 0 ; i < cores;i++)
+	{
+		sum+=workRemaining(allProceses[i],size);
+	}
+	return sum;
+}
+
+typedef struct{
+	int proc;
+	int timeRemaining;
+}RR_Data;
 
 void runRR_Load(Process* allProceses, int num)
 {
@@ -464,70 +405,118 @@ void runRR_Load(Process* allProceses, int num)
 	//make one queue per core
 	Process*** arrOfQueuesOfProcesses = (Process***)malloc(sizeof(Process**)*cores);
 	
+	
 	//each queue needs to be big enough
 	for(int i = 0 ; i < cores; i++)
 		arrOfQueuesOfProcesses[i] = (Process**)malloc(sizeof(Process*)*num);
 		
+	//set all to null
 	for(int i = 0; i<cores; i++)
 		for(int j = 0 ; j < num; j++)
 			arrOfQueuesOfProcesses[i][j]=NULL;
-		
-	int currentTime;
-	int endTime;
-	int index = 0;
 	
-	for(int currProc = 0; currProc<num;currProc++)
-	{		
-		currentTime = allProceses[currProc].arrivalTime;
-
-		//if the last process, run until done
-		if(currProc == num-1)
-			endTime=INT_MAX;
-		else
-			endTime=allProceses[currProc+1].arrivalTime;
-			
-			
-		printf("Assigning proc#%d to core#%d\n",allProceses[currProc].id,index);
+	//make array of data for each core
+	RR_Data* coreState = (RR_Data*)malloc(sizeof(RR_Data)*cores);
 		
-		for(int i = 0 ; i < num; i++)
-		{
-			if(arrOfQueuesOfProcesses[index][i]==NULL)
-			{
-				arrOfQueuesOfProcesses[index][i]=&allProceses[currProc];
-				break;
-			}
-		}
-		
-		printf("------------------------\n");
-		printf("Time:%d\n",currentTime);
-		for(int c = 0; c < cores; c++)
-		{
-			printf("Core:%d\n\t",c);
-			for(int i = 0 ; i < num; i++)
-			{
-				//if currently running on this core
-				if(arrOfQueuesOfProcesses[c][i]!=NULL
-					&&arrOfQueuesOfProcesses[c][i]->timeRemaining>0)
-						printf("%d\t",arrOfQueuesOfProcesses[c][i]->id);
-			}
-			printf("\n");
-		}
-		printf("------------------------\n");
-		
-		int minRunning=INT_MAX;
-
-		for(int i = 0 ; i < cores; i++)
-		{
-			int numRunning = runRR_SingleFromUntil(arrOfQueuesOfProcesses[i],num,currentTime,endTime);
-			if(minRunning>numRunning){
-				minRunning=numRunning;
-				index = i;
-			}
-		}
-		
-		currentTime=endTime;
+	for(int i = 0; i < cores; i++)
+	{
+		coreState[i].proc=0;
+		coreState[i].timeRemaining=0;
 	}
 	
+	int time=0;
+	int incomingProcIndex=0;
+
+	//while there is still stuff to do
+	while(incomingProcIndex<num || totalWorkRemaining(arrOfQueuesOfProcesses,cores,num))
+	{
+		//need to add a procs
+		while(incomingProcIndex<num && allProceses[incomingProcIndex].arrivalTime==time)
+		{
+			int minLoad = INT_MAX;
+			int minIndex = -1;
+			
+			//determine core to add to
+			for(int i =0;i<cores;i++)
+			{
+				int t = workRemaining(arrOfQueuesOfProcesses[i],num);
+				if(t<minLoad)
+				{
+					minLoad=t;
+					minIndex=i;
+				}
+				printf("At t=%d core %d has %d remaining\n",time,i,t);
+			}
+			
+			//determine where to add proc to
+			for(int i = 0; i<num; i++)
+			{
+				if(arrOfQueuesOfProcesses[minIndex][i]==NULL)
+				{
+					arrOfQueuesOfProcesses[minIndex][i]=&allProceses[incomingProcIndex];
+					incomingProcIndex++;
+					break;
+				}
+			}
+			
+			printf("At t=%d proc %d went to core %d\n",time,allProceses[incomingProcIndex].id,minIndex);
+			
+		}
+		
+		//run for 1 step on each core
+		for(int curCore=0;curCore<cores;curCore++)
+		{
+			//if we need to find a new proc to run
+			if(coreState[curCore].timeRemaining<=0)
+			{
+				//code if no proc is found
+				int foundProc=-1;
+				for(int i = 0; i<num; i++)
+				{
+					//increment and loop
+					coreState[curCore].proc++;
+					coreState[curCore].proc%=num;
+					
+					Process* c = arrOfQueuesOfProcesses[curCore][coreState[curCore].proc];
+					
+					//if we found a proc worth running
+					if(c!=NULL && c->timeRemaining>0)
+					{
+						if(quantum > c->timeRemaining)
+							coreState[curCore].timeRemaining = c->timeRemaining;
+						else
+							coreState[curCore].timeRemaining = quantum;
+						//set code to found proc
+						foundProc=coreState[curCore].proc;
+						break;
+					}
+				}
+				coreState[curCore].proc=foundProc;
+			}
+			
+			//if this core is working
+			if(coreState[curCore].proc>=0)
+			{
+				Process* c = arrOfQueuesOfProcesses[curCore][coreState[curCore].proc];
+				c->timeRemaining--;
+				coreState[curCore].timeRemaining--;
+				if(c->startTime<0)
+					c->startTime=time;
+				//finish time would be at end of second
+				c->finishTime = time+1;
+				
+				printf("Proc %d ran 1s on core %d. T=%d\n",c->id,curCore,time);
+				printf("\tHas %ds remaining\n",c->timeRemaining);
+			}
+			
+		}
+		time++;
+	}
+	
+	free(coreState);
+	for(int i = 0 ; i < cores; i++)
+		free(arrOfQueuesOfProcesses[i]);
+	free(arrOfQueuesOfProcesses);
 	
 }
 
@@ -621,7 +610,7 @@ int main(int argc, char *argv[])
 	
 	else if(strcmp(scheduler,"rr-load") == 0) {
 		printf("RR load core starting\n");
-		runRR_Single(processes, count);
+		runRR_Load(processes, count);
 		printf("\n");
 	}
 	printf("SCHEDULED\n\n");
