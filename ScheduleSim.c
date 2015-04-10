@@ -82,7 +82,6 @@ int runFCFS_Single(Process* allProceses, int num)
 	qsort(allProceses,num,sizeof(Process),compProcByArrival);
 	
 	
-	
 	for(int i = 0 ; i < num; i++)
 	{
 		//make sure time remaining is accurate
@@ -532,7 +531,7 @@ void runRR_Load(Process* allProceses, int num)
 	
 }
 
-int main()
+int main(int argc, char *argv[])
 {
 	srand((int)time(NULL));
 	
@@ -544,9 +543,9 @@ int main()
 	char scheduler[30];
 	quantum = 0; cores = 0;
 	
-	char outputFilename[] = "output1.txt";
+	char outputFilename[] = "output.txt";
 
-	ifp = fopen("input1.txt", mode);
+	ifp = fopen(argv[1], mode);
 
 	if (ifp == NULL) {
 		fprintf(stderr, "Can't open input file!\n");
@@ -568,10 +567,10 @@ int main()
 		count++;
 	}
 	
-	printf("Number of processes: %d\n\n", count);
+	printf("\nNumber of processes: %d\n\n", count);
 	
 	//Re-opens file to load process.
-	ifp = fopen("input1.txt", mode);
+	ifp = fopen(argv[1], mode);
 	
 	fscanf(ifp, "%s", scheduler);
 	printf("Type: %s ", scheduler );
@@ -643,16 +642,18 @@ int main()
 		int turn = processes[i].burstTime+processes[i].arrivalTime;
 		int wait = processes[i].finishTime-turn;
 		printf("ID:%d Start:%d End:%d Turnaround:%d Wait:%d\n", processes[i].id, processes[i].startTime, processes[i].finishTime, turn, wait);
-		fprintf(ofp,"ID:%d Start:%d End:%d Turnaround:%d Wait:%d\n", processes[i].id, processes[i].startTime, processes[i].finishTime, turn, wait);
+		//fprintf(ofp,"ID:%d Start:%d End:%d Turnaround:%d Wait:%d\n", processes[i].id, processes[i].startTime, processes[i].finishTime, turn, wait);
+		fprintf(ofp,"%d %d %d %d %d\n", processes[i].id, processes[i].startTime, processes[i].finishTime, turn, wait);
+
 	}
 	
 			
 	float avgTurn = calcAvgTurnaround(processes,count);
 	float avgWait = calcAvgWait(processes,count);
-	printf("Avg Turnaround: %f\n",avgTurn);
-	printf("Avg Wait: %f\n",avgTurn);
+	printf("Avg Turnaround: %.2f   ",avgTurn);
+	printf("Avg Wait: %.2f\n",avgTurn);
 	
-	fprintf(ofp,"Avg_turnaround:%f   Avg_wait:%f",avgTurn,avgWait);
+	fprintf(ofp,"%.2f   %.2f",avgTurn,avgWait);
 	
 	//testing
 	// cores = 4;
