@@ -94,47 +94,92 @@ int runFCFS_Single(Process* allProceses, int num)
 	}
 	
 	Process** processors = (Process**)malloc(sizeof(Process*)*cores);
+	
+	int time = 0;
+	int dequeuedProcs=0;
 	for(int i = 0 ; i < cores; i++)
-		processors[i]=&allProceses[i];
+	{
+		if(i<num)
+		{
+			processors[i]=&allProceses[i];
+			dequeuedProcs++;
+			if(processors[i]->startTime > time)
+				processors[i]->startTime = processors[i]->arrivalTime;
+			else
+				processors[i]->startTime=time;
+			printf("Scheduled PID:%d on core#%d\n",processors[i]->id,i);
+		}
+		else
+		{
+			processors[i]=NULL;
+		}
+	}
 		
 	int done = 0;
-	int time = 0;
+	
 	while(!done)
 	{
+		//determine time needed for next scheduling point
 		int minTimeTillIdleCore = INT_MAX;
 		int idleIndex = -1;
 		for(int i = 0 ; i < cores; i++)
 		{
 			//if there is a running process on this core
-			if(processors[i]!=NULL && processors[i]->arrivalTime < time &&
+			if(processors[i]!=NULL && processors[i]->arrivalTime <= time &&
 				processors[i]->timeRemaining < minTimeTillIdleCore)
 			{
 				minTimeTillIdleCore = processors[i]->timeRemaining;
 				idleIndex=i;
 			}
 		}
+		//if there is a running process
 		if(idleIndex>=0)
 		{
+			
+			//increment time to next scheduling point
 			time+=minTimeTillIdleCore;
 			
 			for(int i = 0 ; i < cores; i++)
 			{
 				//if there is a running process on this core
-				if(processors[i]!=NULL && processors[i]->arrivalTime < time &&
+				if(processors[i]!=NULL && processors[i]->arrivalTime <= time &&
 					processors[i]->timeRemaining>0)
 				{
-					processors[i]->timeRemaining-=minTimeTillIdleCore;
+					
+					//run that process for the determined time
+					if(time - processors[i]->arrivalTime < minTimeTillIdleCore)
+						processors[i]->timeRemaining-=(time-processors[i]->arrivalTime);
+					else 
+						processors[i]->timeRemaining-=minTimeTillIdleCore;
+					
+					printf("Running PID:%d with %d remaining\n",processors[i]->id,processors[i]->timeRemaining);
+					
+					//if completed
 					if(processors[i]->timeRemaining<=0)
 					{
+						printf("Finished PID:%d on core#%d at:%d\n",processors[i]->id,i,time);
 						processors[i]->finishTime=time;
-						processors[i]=NULL;
+						//if theres another process to run
+						if(dequeuedProcs<num)
+						{
+							processors[i]=&allProceses[dequeuedProcs];
+							if(processors[i]->startTime > time)
+								processors[i]->startTime = processors[i]->arrivalTime;
+							else
+								processors[i]->startTime=time;
+							dequeuedProcs++;
+							printf("Scheduled PID:%d on core#%d\n",processors[i]->id,i);
+						}
+						else
+							processors[i]=NULL;
 					}
 				}
 			}
 		}
-		//found no core that finished running
+		//there is no running process
 		else
 		{
+			printf("managed to fine no running procs\n");
 			//see if theres a core we can start running
 			int minTimeTillActiveCore = INT_MAX;
 			for(int i = 0 ; i < cores; i++)
@@ -153,6 +198,8 @@ int runFCFS_Single(Process* allProceses, int num)
 				time+=minTimeTillActiveCore;
 		}
 	}
+	
+	free(processors);
 	return time;
 }
 
