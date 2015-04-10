@@ -516,16 +516,18 @@ int main(int argc, char *argv[])
 		int turn = processes[i].burstTime+processes[i].arrivalTime;
 		int wait = processes[i].finishTime-turn;
 		printf("ID:%d Start:%d End:%d Turnaround:%d Wait:%d\n", processes[i].id, processes[i].startTime, processes[i].finishTime, turn, wait);
-		fprintf(ofp,"ID:%d Start:%d End:%d Turnaround:%d Wait:%d\n", processes[i].id, processes[i].startTime, processes[i].finishTime, turn, wait);
+		//fprintf(ofp,"ID:%d Start:%d End:%d Turnaround:%d Wait:%d\n", processes[i].id, processes[i].startTime, processes[i].finishTime, turn, wait);
+		fprintf(ofp,"%d %d %d %d %d\n", processes[i].id, processes[i].startTime, processes[i].finishTime, turn, wait);
+
 	}
 	
 			
 	float avgTurn = calcAvgTurnaround(processes,count);
 	float avgWait = calcAvgWait(processes,count);
-	printf("Avg Turnaround: %f\n",avgTurn);
-	printf("Avg Wait: %f\n",avgTurn);
+	printf("Avg Turnaround: %.2f   ",avgTurn);
+	printf("Avg Wait: %.2f\n",avgTurn);
 	
-	fprintf(ofp,"Avg_turnaround:%f   Avg_wait:%f",avgTurn,avgWait);
+	fprintf(ofp,"%.2f   %.2f",avgTurn,avgWait);
 	
 	//testing
 	// cores = 4;
