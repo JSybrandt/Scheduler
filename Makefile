@@ -5,12 +5,12 @@ OUT=schedule
 
 all: build
 
-build: main.o
-	$(CC) $(CFLAGS) -o $(OUT) main.c
+build: ScheduleSim.o
+	$(CC) $(CFLAGS) -o $(OUT) ScheduleSim.c
 	$(RM) *.o
 
-main.o: main.c
-	$(CC) $(CFLAGS) -c main.c
+ScheduleSim.o: ScheduleSim.c
+	$(CC) $(CFLAGS) -c ScheduleSim.c
 
 clean:
 	$(RM) *.o $(OUT)
