@@ -502,7 +502,8 @@ void runRR_Load(Process* allProceses, int num)
 				coreState[curCore].timeRemaining--;
 				if(c->startTime<0)
 					c->startTime=time;
-				c->finishTime = time;
+				//finish time would be at end of second
+				c->finishTime = time+1;
 				
 				printf("Proc %d ran 1s on core %d. T=%d\n",c->id,curCore,time);
 				printf("\tHas %ds remaining\n",c->timeRemaining);
@@ -512,6 +513,10 @@ void runRR_Load(Process* allProceses, int num)
 		time++;
 	}
 	
+	free(coreState);
+	for(int i = 0 ; i < cores; i++)
+		free(arrOfQueuesOfProcesses[i]);
+	free(arrOfQueuesOfProcesses);
 	
 }
 
