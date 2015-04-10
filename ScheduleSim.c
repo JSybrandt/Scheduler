@@ -144,14 +144,14 @@ int runFCFS_Single(Process* allProceses, int num)
 				if(processors[i]!=NULL && processors[i]->arrivalTime <= time &&
 					processors[i]->timeRemaining>0)
 				{
-					
+					int t;
 					//run that process for the determined time
 					if(time - processors[i]->arrivalTime < minTimeTillIdleCore)
-						processors[i]->timeRemaining-=(time-processors[i]->arrivalTime);
+						t=(time-processors[i]->arrivalTime);
 					else 
-						processors[i]->timeRemaining-=minTimeTillIdleCore;
-					
-					printf("Running PID:%d with %d remaining\n",processors[i]->id,processors[i]->timeRemaining);
+						t=minTimeTillIdleCore;
+					processors[i]->timeRemaining-=t;
+					printf("Running PID:%d for %ds with %d remaining\n",processors[i]->id,t,processors[i]->timeRemaining);
 					
 					//if completed
 					if(processors[i]->timeRemaining<=0)
@@ -640,7 +640,7 @@ int main(int argc, char *argv[])
 	float avgTurn = calcAvgTurnaround(processes,count);
 	float avgWait = calcAvgWait(processes,count);
 	printf("Avg Turnaround: %.2f   ",avgTurn);
-	printf("Avg Wait: %.2f\n",avgTurn);
+	printf("Avg Wait: %.2f\n",avgWait);
 	
 	fprintf(ofp,"%.2f   %.2f",avgTurn,avgWait);
 	
