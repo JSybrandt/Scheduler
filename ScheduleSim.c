@@ -76,88 +76,8 @@ float calcAvgWait(Process* allProceses, int num)
 	return ((float)sum)/num;
 }
 
-int runFCFS_Single(Process* allProceses, int num)
-{
-	//sort by arrival time
-	qsort(allProceses,num,sizeof(Process),compProcByArrival);
-	
-	
-	
-	for(int i = 0 ; i < num; i++)
-	{
-		//make sure time remaining is accurate
-		allProceses[i].timeRemaining = allProceses[i].burstTime;
-		
-		//make sure time remaining is invalid
-		allProceses[i].startTime=-1;
-
-	}
-	
-	Process** processors = (Process**)malloc(sizeof(Process*)*cores);
-	for(int i = 0 ; i < cores; i++)
-		processors[i]=&allProceses[i];
-		
-	int done = 0;
-	int time = 0;
-	while(!done)
-	{
-		int minTimeTillIdleCore = INT_MAX;
-		int idleIndex = -1;
-		for(int i = 0 ; i < cores; i++)
-		{
-			//if there is a running process on this core
-			if(processors[i]!=NULL && processors[i]->arrivalTime < time &&
-				processors[i]->timeRemaining < minTimeTillIdleCore)
-			{
-				minTimeTillIdleCore = processors[i]->timeRemaining;
-				idleIndex=i;
-			}
-		}
-		if(idleIndex>=0)
-		{
-			time+=minTimeTillIdleCore;
-			
-			for(int i = 0 ; i < cores; i++)
-			{
-				//if there is a running process on this core
-				if(processors[i]!=NULL && processors[i]->arrivalTime < time &&
-					processors[i]->timeRemaining>0)
-				{
-					processors[i]->timeRemaining-=minTimeTillIdleCore;
-					if(processors[i]->timeRemaining<=0)
-					{
-						processors[i]->finishTime=time;
-						processors[i]=NULL;
-					}
-				}
-			}
-		}
-		//found no core that finished running
-		else
-		{
-			//see if theres a core we can start running
-			int minTimeTillActiveCore = INT_MAX;
-			for(int i = 0 ; i < cores; i++)
-			{
-				//if there is a running process waiting to run on this core
-				if(processors[i]!=NULL && processors[i]->arrivalTime > time)
-				{
-					int t = processors[i]->arrivalTime - time;
-					if(minTimeTillActiveCore>t)minTimeTillActiveCore=t;
-				}
-			}
-			//if we found a process to skip to
-			if(minTimeTillActiveCore == INT_MAX)
-				done=1;
-			else
-				time+=minTimeTillActiveCore;
-		}
-	}
-	return time;
-}
-
 //each scheduler needs to sort the processes in the way it wants
-int runFCFS_SingleCore(Process* allProceses, int num)
+int runFCFS_Single(Process* allProceses, int num)
 {	
 	//sort by arrival time
 	qsort(allProceses,num,sizeof(Process),compProcByArrival);
@@ -197,7 +117,7 @@ int runFCFS_Percore(Process* allProceses, int num)
 		int thisCoreSize = coreSize;
 		if(i==cores-1) 
 			thisCoreSize = num - ((i)*coreSize);//get the rest if uneven
-		int t = runFCFS_SingleCore(startProcess, thisCoreSize);
+		int t = runFCFS_Single(startProcess, thisCoreSize);
 		
 		printf("running FCFS on %d-%d\n",startPos,startPos+thisCoreSize-1);
 		
@@ -485,7 +405,7 @@ void runRR_Load(Process* allProceses, int num)
 	
 }
 
-int main()
+int main(int argc, char *argv[])
 {
 	srand((int)time(NULL));
 	
@@ -497,9 +417,9 @@ int main()
 	char scheduler[30];
 	quantum = 0; cores = 0;
 	
-	char outputFilename[] = "output1.txt";
+	char outputFilename[] = "output.txt";
 
-	ifp = fopen("input1.txt", mode);
+	ifp = fopen(argv[1], mode);
 
 	if (ifp == NULL) {
 		fprintf(stderr, "Can't open input file!\n");
@@ -521,10 +441,10 @@ int main()
 		count++;
 	}
 	
-	printf("Number of processes: %d\n\n", count);
+	printf("\nNumber of processes: %d\n\n", count);
 	
 	//Re-opens file to load process.
-	ifp = fopen("input1.txt", mode);
+	ifp = fopen(argv[1], mode);
 	
 	fscanf(ifp, "%s", scheduler);
 	printf("Type: %s ", scheduler );
