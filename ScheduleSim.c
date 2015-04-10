@@ -623,8 +623,8 @@ int main(int argc, char *argv[])
 	//fprintf(ofp, "Type: %s quantum: %d cores %d\n", scheduler, quantum, cores);
 	
 	for(int i = 0; i < count; i++) {
-		int turn = processes[i].burstTime+processes[i].arrivalTime;
-		int wait = processes[i].finishTime-turn;
+		int turn = processes[i].finishTime-processes[i].arrivalTime;
+		int wait = turn-processes[i].burstTime;
 		printf("ID:%d Start:%d End:%d Turnaround:%d Wait:%d\n", processes[i].id, processes[i].startTime, processes[i].finishTime, turn, wait);
 		//fprintf(ofp,"ID:%d Start:%d End:%d Turnaround:%d Wait:%d\n", processes[i].id, processes[i].startTime, processes[i].finishTime, turn, wait);
 		fprintf(ofp,"%d %d %d %d %d\n", processes[i].id, processes[i].startTime, processes[i].finishTime, turn, wait);
@@ -638,34 +638,6 @@ int main(int argc, char *argv[])
 	printf("Avg Wait: %.2f\n",avgTurn);
 	
 	fprintf(ofp,"%.2f   %.2f",avgTurn,avgWait);
-	
-	//testing
-	// cores = 4;
-	// quantum = 4;
-	// int numProcesses = 10;
-	// Process* processes = (Process*)malloc(numProcesses);
-	
-	// for(int i = 0; i < numProcesses; i++)
-	// {
-		// processes[i].id = i+1;
-		// processes[i].arrivalTime = i;//rand()%10;
-		// processes[i].timeRemaining = processes[i].burstTime = i+1;//rand()%10;
-		// processes[i].startTime = -1;
-		// processes[i].finishTime = -1;
-	// }
-	
-	// runRR_Percore(processes,numProcesses);
-	
-	// printf("Avg Turnaround:%f\n",calcAvgTurnaround(processes,numProcesses));
-	// printf("Avg Wait:%f\n",calcAvgWait(processes,numProcesses));
-	
-	// qsort(processes,numProcesses,sizeof(Process),compProcById);
-	
-	// for(int i = 0; i < numProcesses; i++)
-	// {
-		// printf("ID:%d EndTime:%d\n",processes[i].id,processes[i].finishTime);
-	// }
-	
 	
 	return 0;
 }
