@@ -1,3 +1,14 @@
+/*
+  Author:  Caelan Mayberry & Justin Sybrandt
+  Course:  COMP 340, Operating Systems
+  Date:    18 March 2015
+  Description:   This file implements the
+                 functionality required for
+                 Project 2, fcfs-single scheduler.
+  Compile with:  make all
+  Run with:      ./schedule input1.txt
+
+*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -502,9 +513,10 @@ int main()
 	//fprintf(ofp, "Type: %s quantum: %d cores %d\n", scheduler, quantum, cores);
 	
 	for(int i = 0; i < count; i++) {
-		int wait = processes[i].finishTime-processes[i].burstTime-processes[i].arrivalTime;
-		printf("ID:%d Start:%d End:%d Turnaround:%d Wait:%d\n", processes[i].id, processes[i].startTime, processes[i].finishTime, wait);
-		fprintf(ofp,"ID:%d Start:%d End:%d Turnaround:%d Wait:%d\n", processes[i].id, processes[i].startTime, processes[i].finishTime, wait);
+		int turn = processes[i].burstTime+processes[i].arrivalTime;
+		int wait = processes[i].finishTime-turn;
+		printf("ID:%d Start:%d End:%d Turnaround:%d Wait:%d\n", processes[i].id, processes[i].startTime, processes[i].finishTime, turn, wait);
+		fprintf(ofp,"ID:%d Start:%d End:%d Turnaround:%d Wait:%d\n", processes[i].id, processes[i].startTime, processes[i].finishTime, turn, wait);
 	}
 	
 			
@@ -513,7 +525,7 @@ int main()
 	printf("Avg Turnaround: %f\n",avgTurn);
 	printf("Avg Wait: %f\n",avgTurn);
 	
-	fprintf(ofp,"Avg_turnaround:%d   Avg_wait:%d",avgTurn,avgWait);
+	fprintf(ofp,"Avg_turnaround:%f   Avg_wait:%f",avgTurn,avgWait);
 	
 	//testing
 	// cores = 4;
