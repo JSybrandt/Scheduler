@@ -1,12 +1,12 @@
 /*
   Author:  Caelan Mayberry & Justin Sybrandt
   Course:  COMP 340, Operating Systems
-  Date:    18 March 2015
+  Date:    10 April 2015
   Description:   This file implements the
                  functionality required for
-                 Project 2, fcfs-single scheduler.
+                 Project 2.
   Compile with:  make all
-  Run with:      ./schedule input1.txt
+  Run with:      ./schedule input1.txt (or other input file)
 
 */
 #include <stdio.h>
